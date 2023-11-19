@@ -3,6 +3,11 @@
 
 .data
 
+matrix  dw 1, 2, 4, 4
+        dw 1, 4, 3, 6
+        dw 4, 3, 2, 1 
+        dw 3, 1, 1, 1 
+
 msg_menu db '1. print matrix',           0, 10
          db '2. move zeros',             0, 10
          db '3. compare row and column', 0, 10
@@ -10,18 +15,14 @@ msg_menu db '1. print matrix',           0, 10
          db '5. exit',                   0, 10
          db '>>', '$'
 
-matrix  dw 1, 2, 1, 4
-        dw 1, 4, 3, 6
-        dw 4, 3, 2, 1 
-        dw 3, 1, 0, 1 
-
 msg_not_equal_second db 'Not equal in second task', 13, 10, '$'
 msg_equal_second db 'Equal in second task', 13, 10, '$'
 msg_maximal db 'Maximal value: ', '$'
+msg_input_index db 'Input index>>', '$'
 
 matrix_maximal dw 0
 
-index equ 2
+index dw 0
 rows equ 4
 columns equ 4
 offst equ 2
@@ -208,10 +209,30 @@ fcompare_rows_columns proc
   push cx
   push dx
 
-  mov si, index * columns * offst + columns * offst - offst
+  ; danger bug is possible
+  xor ax, ax
+  mput_msg msg_input_index
+  call fprint_message
+  call finput
+  xor ah, ah
+  sub al, 30h
+  cmp al, rows  
+  jge fcompare_rows_columns_exit
+  mov index, ax
+  call fprint_ln
+
+  mov ax, index
+  mov bx, columns * offst
+  mul bx
+  mov si, ax
+  add si, columns * offst - offst
   mov di, columns - 1
   compare_rows_columns_loop:
-    cmp si, index * columns * offst - offst
+    mov ax, index
+    mov bx, columns * offst
+    mul bx
+    sub ax, offst
+    cmp si, ax
     je compare_rows_columns_loop_end 
 
     cmp di, -1
@@ -227,7 +248,16 @@ fcompare_rows_columns proc
     mov ax, di
     mov bx, columns * offst
     mul bx
-    add ax, index * offst
+
+    push ax
+
+    mov ax, index
+    mov bx, offst
+    mul bx
+    mov bx, ax
+    pop ax
+    add ax, bx
+
     mov bx, ax
     mov dx, [bx]
 
@@ -235,8 +265,18 @@ fcompare_rows_columns proc
     pop bx
     pop ax
 
+    ; push dx
+    ; tdgt
+    ; call fprint_char_by_addr
+    ; pop dx
+
     ; row item
     mov bx, [matrix + si]
+    ; push dx
+    ; mov dx, bx
+    ; tdgt
+    ; call fprint_char_by_addr
+    ; pop dx
     
     cmp bx, dx
     jne compare_rows_columns_not_equal
@@ -371,13 +411,17 @@ ffind_maximal proc
       
 ffind_maximal endp
 
-fshow_menu proc
-  mov ah, 9      
-  mov dx, offset msg_menu
-  int 21h
-
+finput proc
   mov ah, 1     
   int 21h
+  ret
+finput endp
+
+fshow_menu proc
+  mput_msg msg_menu
+  call fprint_message
+  
+  call finput
 
   cmp al, '1'  
   je option1
@@ -426,14 +470,6 @@ start:
   mov ds, ax
 
   call fshow_menu
-  ; call fprint_matrix
-  ; call fmove_zeros
-  ; call fprint_ln
-  ; call fprint_matrix
-  ; call fprint_ln
-  ; call fcompare_rows_columns
-  ; call fprint_ln
-  ; call ffind_maximal
   call fexit
 
 end start
