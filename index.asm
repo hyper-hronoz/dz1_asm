@@ -3,6 +3,12 @@
 
 .data
 
+msg_menu db '1. print matrix',           0, 10
+         db '2. move zeros',             0, 10
+         db '3. compare row and column', 0, 10
+         db '4. find max',               0, 10
+         db '5. exit',                   0, 10
+         db '>>', '$'
 
 matrix  dw 1, 2, 1, 4
         dw 1, 4, 3, 6
@@ -365,18 +371,69 @@ ffind_maximal proc
       
 ffind_maximal endp
 
+fshow_menu proc
+  mov ah, 9      
+  mov dx, offset msg_menu
+  int 21h
+
+  mov ah, 1     
+  int 21h
+
+  cmp al, '1'  
+  je option1
+  cmp al, '2'
+  je option2
+  cmp al, '3'
+  je option3
+  cmp al, '4'
+  je option4
+  cmp al, '5'
+  je fshow_menu_exit
+
+  jmp fshow_menu
+
+  option1:
+    call fprint_ln
+    call fprint_matrix
+    call fprint_ln
+    jmp fshow_menu
+
+  option2:
+    call fprint_ln
+    call fmove_zeros
+    call fprint_ln
+    jmp fshow_menu
+
+  option3:
+    call fprint_ln
+    call fcompare_rows_columns
+    call fprint_ln
+    jmp fshow_menu
+
+  option4:
+    call fprint_ln
+    call ffind_maximal
+    call fprint_ln
+    jmp fshow_menu
+
+  fshow_menu_exit:
+    ret
+
+fshow_menu endp
+
 start:
   mov ax, @data
   mov ds, ax
 
-  call fprint_matrix
-  call fmove_zeros
-  call fprint_ln
-  call fprint_matrix
-  call fprint_ln
-  call fcompare_rows_columns
-  call fprint_ln
-  call ffind_maximal
+  call fshow_menu
+  ; call fprint_matrix
+  ; call fmove_zeros
+  ; call fprint_ln
+  ; call fprint_matrix
+  ; call fprint_ln
+  ; call fcompare_rows_columns
+  ; call fprint_ln
+  ; call ffind_maximal
   call fexit
 
 end start
