@@ -3,10 +3,16 @@
 
 .data
 
-matrix  dw 1, 2, 4, 4
-        dw 1, 4, 3, 6
-        dw 4, 3, 2, 1 
-        dw 3, 1, 1, 1 
+max_rows equ 100
+max_columns equ 100
+
+rows dw ?
+columns dw ?
+
+matrix  dw max_rows * max_columns dup(?)
+
+message db 'Enter a number of any length: $'
+
 
 msg_menu db '1. print matrix',           0, 10
          db '2. move zeros',             0, 10
@@ -19,15 +25,21 @@ msg_not_equal_second db 'Not equal in second task', 13, 10, '$'
 msg_equal_second db 'Equal in second task', 13, 10, '$'
 msg_maximal db 'Maximal value: ', '$'
 msg_input_index db 'Input index>>', '$'
+msg_input_rows db 'Input rows>>', '$'
+msg_input_columns db 'Input columns>>', '$'
 
 matrix_maximal dw 0
 
+
 index dw 0
-rows equ 4
-columns equ 4
 offst equ 2
 tdgt equ add dx, 30h
 
+buffer_size equ 255
+input_buffer db buffer_size dup('$')
+result dw 0
+
+newline db 0dh, 0ah, '$'
 .code
 
 mput_msg macro msg
@@ -88,12 +100,31 @@ fprint_matrix proc
     xor ax, ax
 
     mov ax, cx
-    mov dx, rows * offst
+
+    push ax
+    push bx
+
+    mov ax, offst
+    mov bx, columns
+    mul bx
+    mov dx, ax
+
+    pop bx
+    pop ax
+
     mul dx
     mov si, ax
 
     mov di, ax 
-    add di, offst * columns
+
+    push ax
+    push bx
+    mov ax, offst
+    mov bx, columns
+    mul bx
+    add di, ax
+    pop bx
+    pop ax
 
     xor ax, ax
     print_matrix_jloop:
@@ -142,19 +173,37 @@ fmove_zeros proc
 
     mov cx, 0
     move_zeros_jloop:
-      cmp cx, rows - 1
+      push ax
+      mov ax, rows
+      dec ax
+      cmp cx, ax
+      pop ax
       je move_zeros_jloop_end
 
       push ax
 
       ; mov si, columns * offst * ax
-      mov si, columns * offst
+      push ax
+      push bx
+      mov ax, offst
+      mov bx, columns
+      mul bx
+      mov si, ax
+      pop bx
+      pop ax
       mul si
       mov si, ax
 
       ; mov di, columns * offst * ax + columns * offst
       mov di, ax
-      add di, columns * offst
+      push ax
+      push bx
+      mov ax, offst
+      mov bx, columns
+      mul bx
+      add di, ax
+      pop bx
+      pop ax
       sub di, offst
 
       pop ax
@@ -216,20 +265,48 @@ fcompare_rows_columns proc
   call finput
   xor ah, ah
   sub al, 30h
-  cmp al, rows  
+  cmp ax, rows  
   jge fcompare_rows_columns_exit
   mov index, ax
   call fprint_ln
 
   mov ax, index
-  mov bx, columns * offst
+  push ax
+  mov ax, columns
+  mov bx, offst
+  mul bx
+  mov bx, ax
+  pop ax
   mul bx
   mov si, ax
-  add si, columns * offst - offst
-  mov di, columns - 1
+
+  push ax
+  push bx
+  mov ax, offst
+  mov bx, columns
+  mul bx
+  sub ax, offst
+  add si, ax
+  pop bx
+  pop ax
+  mov di, columns
+  dec di
+  jmp compare_rows_columns_loop
+  fcompare_rows_columns_exit:
+    call fprint_message
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
   compare_rows_columns_loop:
     mov ax, index
-    mov bx, columns * offst
+    push ax
+    mov ax, offst
+    mov bx, columns
+    mul bx
+    mov bx, ax
+    pop ax
     mul bx
     sub ax, offst
     cmp si, ax
@@ -246,11 +323,16 @@ fcompare_rows_columns proc
     ; mov dx, [matrix + 2 * columns * offst + index * offst] 
     mov dx, [matrix] 
     mov ax, di
-    mov bx, columns * offst
+
+    push ax 
+    mov ax, offst
+    mov bx, columns
     mul bx
+    mov bx, ax
+    pop ax
 
+    mul bx
     push ax
-
     mov ax, index
     mov bx, offst
     mul bx
@@ -291,14 +373,6 @@ fcompare_rows_columns proc
     mput_msg msg_not_equal_second
     jmp fcompare_rows_columns_exit
 
-  fcompare_rows_columns_exit:
-    call fprint_message
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    ret
-
 fcompare_rows_columns endp
 
 ffind_maximal proc
@@ -319,12 +393,29 @@ ffind_maximal proc
     xor ax, ax
 
     mov ax, cx
-    mov dx, rows * offst
+
+    push ax
+    push bx
+    mov ax, rows
+    mov bx, offst
+    mul bx
+    mov dx, ax
+    pop bx
+    pop ax
+
     mul dx
     mov si, ax
 
     mov di, ax 
-    add di, offst * columns
+
+    push ax
+    push bx
+    mov ax, offst
+    mov bx, columns
+    mul bx
+    add di, ax
+    pop bx
+    pop ax
 
     xor ax, ax
     find_maximal_jloop:
@@ -465,9 +556,106 @@ fshow_menu proc
 
 fshow_menu endp
 
+ffill_matrix proc
+  push ax
+  push cx
+  push bx
+  push dx
+  push si
+  push di
+
+  mov cx, 0 ; rows counter
+  mov bx, rows
+
+  fill_matrix_iloop:
+    cmp cx, bx
+    je fill_matrix_iloop_end
+    
+    xor ax, ax
+
+    mov ax, cx
+
+    push ax
+    push bx
+
+    mov ax, offst
+    mov bx, columns
+    mul bx
+    mov dx, ax
+
+    pop bx
+    pop ax
+
+    mul dx
+    mov si, ax
+
+    mov di, ax 
+
+    push ax
+    push bx
+    mov ax, offst
+    mov bx, columns
+    mul bx
+    add di, ax
+    pop bx
+    pop ax
+
+    xor ax, ax
+    fill_matrix_jloop:
+      cmp si, di
+      je fill_matrix_jloop_end
+
+      push ax
+      call finput
+      sub al, 30h
+      xor ah, ah
+      mov [matrix + si], ax
+      pop ax
+
+      mov dx, ' '
+      call fprint_char_by_addr
+
+      add si, offst 
+      jmp fill_matrix_jloop
+    fill_matrix_jloop_end:
+      inc cx
+
+      mov dx, 10
+      call fprint_char_by_addr
+
+      jmp fill_matrix_iloop
+  fill_matrix_iloop_end:
+      pop ax
+      pop cx
+      pop bx
+      pop dx
+      pop si
+      pop di
+      ret
+
+ffill_matrix endp
+
 start:
   mov ax, @data
   mov ds, ax
+
+  mput_msg msg_input_rows
+  call fprint_message
+  call finput
+  call fprint_ln
+  sub al, 30h
+  mov ah, 0
+  mov rows, ax
+
+  mput_msg msg_input_columns
+  call fprint_message
+  call finput
+  call fprint_ln
+  sub al, 30h
+  mov ah, 0
+  mov columns, ax
+
+  call ffill_matrix
 
   call fshow_menu
   call fexit
