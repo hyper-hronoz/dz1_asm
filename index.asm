@@ -30,17 +30,132 @@ msg_input_columns db 'Input columns>>', '$'
 
 matrix_maximal dw 0
 
-
 index dw 0
 offst equ 2
 tdgt equ add dx, 30h
 
 buffer_size equ 255
-input_buffer db buffer_size dup('$')
+
+input_buffer db 8 dup('$')
+result_buffer dw 0
+number_buffer dw 0
 result dw 0
 
-newline db 0dh, 0ah, '$'
+bfr_fill_matrix dw ?
 .code
+
+mnumber_input MACRO var:req
+  local exit, convert, greater, break, isDigit, skip
+  push ax
+  push bx
+  push dx
+  push cx
+  push si
+
+
+  mov ah, 0ah
+  mov dx, offset input_buffer
+  int 21h
+
+  xor ax, ax
+  mov si, 2
+
+  cmp input_buffer[2], '-'
+  jne convert
+
+  inc si
+
+  convert:
+  mov al, input_buffer[si]
+
+  cmp ax, '0'
+  jge greater
+  jmp break
+
+  greater:
+  cmp ax, '9'
+  jle isDigit
+  jmp break
+
+  isDigit:
+  and ax, 0fh
+  push ax
+
+  mov ax, result_buffer
+  mov bl, 10
+  mul bl
+  mov result_buffer, ax
+
+  pop ax
+  add result_buffer, ax
+
+  inc si
+  jmp convert
+
+  break:
+  cmp ax, 0dh
+  ; jne far ptr input_errorL
+
+  skip:
+  mov ax, result_buffer
+  mov var, ax
+
+  cmp input_buffer[2], '-'
+  jne exit
+  neg var
+
+  exit:
+  mov result_buffer, 0
+
+
+  pop si
+  pop cx
+  pop dx
+  pop bx
+  pop ax
+ENDM
+
+input_errorL:
+  call fexit
+
+mnumber_output macro num:req
+local exit, skip, pushing, outputLoop
+  push ax
+  push bx
+  push dx
+  push cx
+
+  mov ax, num
+  cmp ax, 0
+  jnl skip
+  mov dx, '-'
+  call fprint_char_by_addr
+  neg ax
+
+  skip:
+  mov bx, 10
+  xor cx, cx
+  pushing:
+  xor dx, dx
+  div bx
+  push dx
+  inc cx
+  test ax, ax
+  jnz pushing
+
+  mov ah, 02h
+  outputLoop:
+  pop dx
+  add dx, '0'
+  int 21h
+  loop outputLoop
+
+  exit:
+  pop cx
+  pop dx
+  pop bx
+  pop ax
+endm
 
 mput_msg macro msg
   mov dx, offset msg
@@ -132,8 +247,7 @@ fprint_matrix proc
       je print_matrix_jloop_end
 
       mov dx, [matrix + si]
-      tdgt
-      call fprint_char_by_addr
+      mnumber_output dx
 
       mov dx, ' '
       call fprint_char_by_addr
@@ -422,10 +536,6 @@ ffind_maximal proc
       cmp si, di
       je find_maximal_jloop_end
 
-      ; i in cx
-      ; mov dx, cx
-      ; tdgt
-      ; call fprint_char_by_addr
 
       ; blows makes ax: 0123
       push ax
@@ -439,10 +549,6 @@ ffind_maximal proc
       ; mov dx, ax
       pop bx
       pop ax
-
-      ; j in dx
-      ; tdgt
-      ; call fprint_char_by_addr
 
       cmp dx, cx
       jg find_maximal_grt_mn_dgnl
@@ -466,8 +572,7 @@ ffind_maximal proc
 
   find_maximal_grt_sd_dgnl:
     mov dx, [matrix + si]
-    tdgt
-    call fprint_char_by_addr
+    mnumber_output dx
     mov dx, ' '
     call fprint_char_by_addr
 
@@ -490,8 +595,7 @@ ffind_maximal proc
     mput_msg msg_maximal
     call fprint_message
     mov dx, matrix_maximal
-    tdgt
-    call fprint_char_by_addr
+    mnumber_output dx
     pop ax
     pop cx
     pop bx
@@ -567,6 +671,18 @@ ffill_matrix proc
   mov cx, 0 ; rows counter
   mov bx, rows
 
+
+  jmp skip
+  fill_matrix_iloop_end:
+      pop ax
+      pop cx
+      pop bx
+      pop dx
+      pop si
+      pop di
+      ret
+  skip:
+
   fill_matrix_iloop:
     cmp cx, bx
     je fill_matrix_iloop_end
@@ -605,15 +721,17 @@ ffill_matrix proc
       cmp si, di
       je fill_matrix_jloop_end
 
+      mnumber_input bfr_fill_matrix
       push ax
-      call finput
-      sub al, 30h
-      xor ah, ah
+      mov ax, bfr_fill_matrix
       mov [matrix + si], ax
       pop ax
-
-      mov dx, ' '
+      
+      mov dx, 10
       call fprint_char_by_addr
+
+      ; mov dx, 10
+      ; call fprint_char_by_addr
 
       add si, offst 
       jmp fill_matrix_jloop
@@ -624,16 +742,9 @@ ffill_matrix proc
       call fprint_char_by_addr
 
       jmp fill_matrix_iloop
-  fill_matrix_iloop_end:
-      pop ax
-      pop cx
-      pop bx
-      pop dx
-      pop si
-      pop di
-      ret
 
 ffill_matrix endp
+
 
 start:
   mov ax, @data
@@ -641,20 +752,15 @@ start:
 
   mput_msg msg_input_rows
   call fprint_message
-  call finput
+  mnumber_input rows
+
   call fprint_ln
-  sub al, 30h
-  mov ah, 0
-  mov rows, ax
 
   mput_msg msg_input_columns
   call fprint_message
-  call finput
-  call fprint_ln
-  sub al, 30h
-  mov ah, 0
-  mov columns, ax
+  mnumber_input columns
 
+  call fprint_ln
   call ffill_matrix
 
   call fshow_menu
