@@ -6,7 +6,7 @@
 max_rows equ 100
 max_columns equ 100
 
-rows dw ? 
+rows dw ?
 columns dw ?
 
 matrix  dw max_rows * max_columns dup(?)
@@ -583,18 +583,12 @@ ffind_maximal proc
 
   find_maximal_grt_mn_dgnl:
     push ax
-    push dx
-    ; mov dx, [matrix + si]
-    ; call fprint_char_by_addr
-    ; call fprint_ln
     mov ax, columns
     sub ax, cx
     dec ax
     cmp dx, ax 
     pop ax
-    pop dx
     jl find_maximal_grt_sd_dgnl
-    jmp find_maximal_jloop_ret
 
   ffind_maximal_exit:
     call fprint_ln
