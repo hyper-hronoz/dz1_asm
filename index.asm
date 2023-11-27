@@ -1,4 +1,5 @@
 .model small
+.386
 .stack 100h
 
 .data
@@ -42,6 +43,7 @@ number_buffer dw 0
 result dw 0
 
 bfr_fill_matrix dw ?
+bfr_output_aligned dw 0
 .code
 
 mnumber_input MACRO var:req
@@ -161,7 +163,6 @@ mput_msg macro msg
   mov dx, offset msg
 endm
 
-
 fexit proc
   mov ax, 4c00h
 	int 21h
@@ -196,6 +197,98 @@ fprint_char_by_addr proc
   pop ax
   ret
 fprint_char_by_addr endp
+
+fprint_align_item proc
+  push ax
+  push bx
+  push cx
+
+  push dx
+  mov ax, dx
+  push ax
+  mov bx, 10d
+  cwd
+  idiv bx
+  pop ax
+  cmp ax, dx
+  pop dx
+  je if_single_digit_number 
+
+  push dx
+  mov ax, dx
+  push ax
+  mov bx, 100d
+  cwd
+  idiv bx
+  pop ax
+  cmp ax, dx
+  pop dx
+  je if_two_digit_number 
+
+  push dx
+  mov ax, dx
+  push ax
+  mov bx, 1000d
+  cwd
+  idiv bx
+  pop ax
+  cmp ax, dx
+  pop dx
+  je if_three_digit_number 
+
+  print_align_item_end:
+    mnumber_output bfr_output_aligned
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+  if_single_digit_number:
+    mov bfr_output_aligned, dx
+
+    mov dx, ' '
+    call fprint_char_by_addr
+
+    mov dx, bfr_output_aligned
+    cmp dx, 0
+    jl if_two_digit_number
+
+    mov dx, ' '
+    call fprint_char_by_addr
+
+    mov dx, ' '
+    call fprint_char_by_addr
+
+    jmp print_align_item_end
+
+  if_two_digit_number:
+    mov bfr_output_aligned, dx
+
+    mov dx, ' '
+    call fprint_char_by_addr
+
+    mov dx, bfr_output_aligned
+    cmp dx, 0
+    jl if_three_digit_number
+
+    mov dx, ' '
+    call fprint_char_by_addr
+
+    jmp print_align_item_end
+
+  if_three_digit_number:
+    mov bfr_output_aligned, dx
+
+    mov dx, bfr_output_aligned
+    cmp dx, 0
+    jl print_align_item_end
+
+    mov dx, ' '
+    call fprint_char_by_addr
+
+    jmp print_align_item_end
+    
+fprint_align_item endp
 
 fprint_matrix proc
   push ax
@@ -247,7 +340,7 @@ fprint_matrix proc
       je print_matrix_jloop_end
 
       mov dx, [matrix + si]
-      mnumber_output dx
+      call fprint_align_item
 
       mov dx, ' '
       call fprint_char_by_addr
@@ -770,6 +863,7 @@ start:
   call ffill_matrix
 
   call fshow_menu
+
   call fexit
 
 end start
