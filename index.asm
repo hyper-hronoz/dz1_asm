@@ -7,16 +7,16 @@
 	max_rows equ 100
 	max_columns equ 100
 
-	; rows dw ?
-	; columns dw ?
+	rows dw ?
+	columns dw ?
 
 	; matrix  dw max_rows * max_columns dup(?)
 
-	rows    dw 4
-	columns dw 3
+	; rows    dw 5 
+	; columns dw 5
 
-	matrix dw 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
-	;      matrix dw max_rows * max_columns dup(2)
+	; matrix dw 1, 1, 1, 1, 2, 1, -1, -2, -3, -4, 1, -2, 13,14,15,1,-3,18,19,20, 1,-4,23,24,25
+	     matrix dw max_rows * max_columns dup(2)
 	res_matrix dw max_rows * max_columns dup(0)
 
 	message db 'Enter a number of any length: $'
@@ -36,9 +36,9 @@
 	msg_input_rows db 'Input rows>>', '$'
 	msg_input_columns db 'Input columns>>', '$'
 
-	matrix_maximal dw 0
+	matrix_maximal dw -9999
 
-	index dw 0
+	index dw ?
 	offst equ 2
 	tdgt  equ add dx, 30h
 
@@ -479,130 +479,125 @@ fmove_zeros endp
 fprint_message endp
 
 fcompare_rows_columns proc
-push ax
-push bx
-push cx
-push dx
-
-	;    danger bug is possible
-	xor  ax, ax
-	mput_msg msg_input_index
-	call fprint_message
-	call finput
-	xor  ah, ah
-	sub  al, 30h
-	cmp  ax, rows
-	jge  fcompare_rows_columns_exit
-	mov  index, ax
-	call fprint_ln
-
-	mov  ax, index
-	push ax
-	mov  ax, columns
-	mov  bx, offst
-	mul  bx
-	mov  bx, ax
-	pop  ax
-	mul  bx
-	mov  si, ax
-
-	push ax
-	push bx
-	mov  ax, offst
-	mov  bx, columns
-	mul  bx
-	sub  ax, offst
-	add  si, ax
-	pop  bx
-	pop  ax
-	mov  di, columns
-	dec  di
-	jmp  compare_rows_columns_loop
-
-fcompare_rows_columns_exit:
-	call fprint_message
-	pop  dx
-	pop  cx
-	pop  bx
-	pop  ax
-	ret
-
-compare_rows_columns_loop:
-	mov  ax, index
-	push ax
-	mov  ax, offst
-	mov  bx, columns
-	mul  bx
-	mov  bx, ax
-	pop  ax
-	mul  bx
-	sub  ax, offst
-	cmp  si, ax
-	je   compare_rows_columns_loop_end
-
-	cmp di, -1
-	je  compare_rows_columns_loop_end
-
-	;    column item
 	push ax
 	push bx
 	push cx
+	push dx
+	push si
+	push di
 
-	;   mov dx, [matrix + 2 * columns * offst + index * offst]
-	mov dx, [matrix]
-	mov ax, di
+	mov ax, rows
+	mov bx, columns
+	cmp ax, bx
+	jne compare_loop_if_not_equal
 
+	mput_msg msg_input_index
+	call fprint_message
+	mnumber_input index
+
+	; counter start ---
 	push ax
-	mov  ax, offst
-	mov  bx, columns
-	mul  bx
-	mov  bx, ax
-	pop  ax
 
-	mul  bx
+	mov ax, index
+	mov bx, rows
+	mul bx
+	mov bx, offst
+	mul bx
+
+	mov si, ax
+
+	pop ax
+
+	;counter stop
 	push ax
-	mov  ax, index
-	mov  bx, offst
-	mul  bx
-	mov  bx, ax
-	pop  ax
-	add  ax, bx
+	push bx
 
-	mov bx, ax
-	mov dx, [bx]
+	mov ax, rows
+	mov bx, offst
+	mul bx
 
-	pop cx
+	mov di, si
+	add di, ax
+
 	pop bx
 	pop ax
 
-	; push dx
-	; tdgt
-	; call fprint_char_by_addr
-	; pop dx
+	; mov result_buffer, si
+	; mnumber_output result_buffer
+	; 
+	; call fprint_ln
+	; 
+	; mov result_buffer, di
+	; mnumber_output result_buffer
+	; call fprint_ln
 
-	;   row item
-	mov bx, [matrix + si]
-	;   push dx
-	;   mov dx, bx
-	;   tdgt
-	;   call fprint_char_by_addr
-	;   pop dx
+	; current column
+	mov ax, index
+	mov bx, offst
+	mul bx
+	mov cx, ax
 
-	cmp bx, dx
-	jne compare_rows_columns_not_equal
+	jmp compare_loop
 
-	sub si, offst
-	dec di
-	jmp compare_rows_columns_loop
-
-compare_rows_columns_loop_end:
-	mput_msg msg_equal_second
-	jmp fcompare_rows_columns_exit
-
-compare_rows_columns_not_equal:
+compare_loop_if_not_equal:
 	mput_msg msg_not_equal_second
-	jmp fcompare_rows_columns_exit
+	call fprint_message
+	jmp compare_exit
 
+compare_loop:
+	
+	; current row item
+	mov dx, [matrix + si]
+
+	; ; row output
+	; mov result_buffer, si
+	; mnumber_output result_buffer
+	; call fprint_ln
+	;
+	; ; column output
+	; mov result_buffer, cx
+	; mnumber_output result_buffer
+	; call fprint_ln
+
+
+	push si
+	mov si, cx
+	mov bx, [matrix + si]
+	pop si
+
+	cmp dx, bx
+	jne compare_loop_if_not_equal
+
+	; current column increment
+	push dx
+	mov ax, rows
+	mov bx, offst
+	mul bx
+	pop dx
+	add cx, ax
+	push si
+	mov si, cx
+	mov bx, [matrix + si]
+	pop si
+
+	add si, offst
+	cmp si, di
+	je compare_finish
+
+	jmp compare_loop
+
+compare_finish:
+	mput_msg msg_equal_second
+	call fprint_message
+	call fprint_ln
+compare_exit:
+	pop di
+	pop si
+	pop dx
+	pop cx
+	pop bx
+	pop ax
+	ret
 fcompare_rows_columns endp
 
 ffind_maximal proc
@@ -1043,6 +1038,7 @@ start:
 	call ffill_matrix
 
 	call fshow_menu
+
 
 	call fexit
 
