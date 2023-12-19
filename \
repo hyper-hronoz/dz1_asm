@@ -4,31 +4,15 @@ model use16 small
 .data
 		b dw 175
 
+		k2 dw 150
 		k1 dw 1 
-		k2 dw 2
 
     x dw ?
     y dw ?
     axis dw ? ;задаѐм ось
 
-    ky dw 50
+    ky dw 70
     kx dw 1 
-
-    scr_width equ 639
-
-    f1_begin equ -319
-    f1_end equ 0
-
-    f2_begin equ 0
-    f2_end equ 60
-
-    f3_begin equ 60
-    f3_end equ 320
-
-    f1_clr equ 4
-    f2_clr equ 1
-    f3_clr equ 6
-
 
     v_1 dw 1
     v_5 dw 5
@@ -54,7 +38,7 @@ ftransfer proc
 	fmul
 	fild pi
 	fdiv
-	fild k2
+	fild k1
 	fdiv
 
  	pop dx
@@ -66,20 +50,7 @@ ftransfer endp
 fprint_dot proc
 	push ax
 	push bx
-	push cx
-	push dx
 
-  mov ah, 0Ch 
-  mov bh, 0h 
-  mov dx, y 
-  add dx, top_offst
-  push cx
-  add cx, left_offst
-  int 10h
-  pop cx
-
-  pop dx
-  pop cx
 	pop bx
 	pop ax
 
@@ -153,7 +124,7 @@ fdraw_horizontal_line proc
 
   mov ah, 0ch ;установка графической точки
   mov al, 13 ;зелѐный цвет
-  mov cx, scr_width ;639 итераций, ставит в 639
+  mov cx, 639 ;639 итераций, ставит в 639
   ;колонку, и идѐт до 0
   mov bh, 0h ;установка номера видеостраницы
   mov dx, top_offst ;ставит в 174 строку
@@ -174,7 +145,7 @@ fdraw_chart1 proc
 	push cx
 	push dx
 
-  mov cx, f1_begin ;начинаем рассчитывать функцию
+  mov cx, -300 ;начинаем рассчитывать функцию
 chart_loop1: 
   mov x, cx 
 
@@ -199,11 +170,17 @@ chart_loop1:
 	fchs
 	frndint
 	fistp y
-
-  mov al, f1_clr
-	call fprint_dot
+  mov ah, 0Ch ;установка графической точки
+  mov bh, 0h ;ставим в нулевое окно
+  mov dx, y ;ставим в y строку
+  add dx, top_offst
+  mov al, 0 ;цвет черный
+  push cx
+  add cx, left_offst
+  int 10h
+  pop cx
   
-  cmp cx, f1_end
+  cmp cx, 0
   je finish_chart_loop1
 
 	inc cx
@@ -223,7 +200,7 @@ fdraw_chart2 proc
 	push cx
 	push dx
 
-  mov cx, f2_begin ;начинаем рассчитывать функцию
+  mov cx, 0 ;начинаем рассчитывать функцию
 chart_loop2: 
   mov x, cx 
 
@@ -244,10 +221,17 @@ chart_loop2:
 	fchs
 	frndint
 	fistp y
-  mov al, f2_clr ;цвет черный
-  call fprint_dot
+  mov ah, 0Ch ;установка графической точки
+  mov bh, 0h ;ставим в нулевое окно
+  mov dx, y ;ставим в y строку
+  add dx, top_offst
+  mov al, 0 ;цвет черный
+  push cx
+  add cx, left_offst
+  int 10h
+  pop cx
   
-  cmp cx, f2_end
+  cmp cx, 60
   je finish_chart_loop2
 
 	inc cx
@@ -267,7 +251,7 @@ fdraw_chart3 proc
 	push cx
 	push dx
 
-  mov cx, f3_begin ;начинаем рассчитывать функцию
+  mov cx, 60 ;начинаем рассчитывать функцию
 chart_loop3: 
   mov x, cx 
 
@@ -278,41 +262,32 @@ chart_loop3:
 	fsin
 
 	fmul st(0), st(0)
+	fmul st(0), st(0)
 
 	fild x
 	call ftransfer
-	fild v_1
-	fadd
-	fsin
-
-	fmul
-
-  fild x
-  call ftransfer
-  fld v_0d6
+	fild v_0d6
   fmul
-  fldl2e
-  fmul
-  fld st
-  frndint
-  fsub st(1), st
-  fxch st(1)
-  f2xm1
-  fld1
-  fadd
-  fscale
+  ; fldl2e
+  ; fmul
 
-  fmul st(0), st(2)
+ ;  fmul
 
 	fimul ky
 	fchs
 	frndint
 	fistp y
-
-  mov al, f3_clr
-  call fprint_dot
+  mov ah, 0Ch ;установка графической точки
+  mov bh, 0h ;ставим в нулевое окно
+  mov dx, y ;ставим в y строку
+  add dx, top_offst
+  mov al, 0 ;цвет черный
+  push cx
+  add cx, left_offst
+  int 10h
+  pop cx
   
-  cmp cx, f3_end
+  cmp cx, 200 
   je finish_chart_loop3
 
 	inc cx
