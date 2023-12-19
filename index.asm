@@ -326,6 +326,9 @@ finish_chart_loop3:
   ret
 fdraw_chart3 endp
 
+fdelay proc
+fdelay endp
+
 start:
     mov ax, @data
     mov ds, ax
