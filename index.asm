@@ -4,6 +4,9 @@ model use16 small
 .data
 		b dw 175
 
+		ticks dw ?
+    prescaler dw 20000  
+
 		k1 dw 1 
 		k2 dw 2
 
@@ -43,6 +46,48 @@ model use16 small
 
     temp dw ?
 .code
+
+init_pit proc
+    push ax
+    push bx
+
+    mov al, 34h         ; Control word for channel 0, low byte, mode 2 (rate generator)
+    out 43h, al         ; Send control word to PIT
+
+    mov ax, [prescaler] ; Load prescaler value
+    out 40h, al         ; Send low byte of prescaler to PIT
+    mov al, ah          ; Send high byte of prescaler to PIT
+    out 40h, al         ; 
+
+    pop bx
+    pop ax
+    ret
+init_pit endp
+
+delay proc
+  push ax
+  push bx
+  push dx
+  push cx
+
+  mov ah, 00h    
+  int 1Ah         
+  mov [ticks], dx 
+
+delay_loop:
+  mov ah, 00h    
+  int 1Ah         
+  sub dx, [ticks] 
+  cmp dx, 1      
+  jl delay_loop 
+
+  pop cx
+  pop dx
+  pop bx
+  pop ax
+
+  ret
+delay endp
 
 ftransfer proc
 	push ax
@@ -206,6 +251,7 @@ chart_loop1:
   cmp cx, f1_end
   je finish_chart_loop1
 
+  call delay
 	inc cx
   jmp chart_loop1 ;уменьшаем сx
 
@@ -250,6 +296,7 @@ chart_loop2:
   cmp cx, f2_end
   je finish_chart_loop2
 
+  call delay
 	inc cx
   jmp chart_loop2 ;уменьшаем сx
 
@@ -315,6 +362,7 @@ chart_loop3:
   cmp cx, f3_end
   je finish_chart_loop3
 
+  call delay
 	inc cx
   jmp chart_loop3 ;уменьшаем сx
 
@@ -325,9 +373,6 @@ finish_chart_loop3:
   pop ax
   ret
 fdraw_chart3 endp
-
-fdelay proc
-fdelay endp
 
 start:
     mov ax, @data
@@ -342,6 +387,8 @@ start:
     call fdraw_vertical_line
 
     call fdraw_horizontal_line
+
+    call init_pit
 
 		call fdraw_chart1
 		call fdraw_chart2
