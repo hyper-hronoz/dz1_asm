@@ -19,6 +19,8 @@ model use16 small
     v_3 dw 3
     v_6 dw 6
 
+    v_0d6 dd 0.6
+
     left_offst dw 319
     top_offst dw 174
     PI dw 180 ;задаѐм число пи в радианах
@@ -255,16 +257,17 @@ chart_loop3:
 
 	fild x
 	call ftransfer
+	fild v_1
+	fadd
 	fsin
-	fmul st(0), st(0)
 
-	fild v_5
 	fild x
 	call ftransfer
-	fadd
-	fsqrt
+	fild v_0d6
+  fmul
 
-	fmul
+
+
 
 	fimul ky
 	fchs
