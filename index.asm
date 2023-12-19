@@ -9,6 +9,7 @@ model use16 small
 
 		k1 dw 1 
 		k2 dw 2
+		k3 dw 3
 
     x dw ?
     y dw ?
@@ -47,24 +48,24 @@ model use16 small
     temp dw ?
 .code
 
-init_pit proc
+finit_pscl proc
     push ax
     push bx
 
-    mov al, 34h         ; Control word for channel 0, low byte, mode 2 (rate generator)
-    out 43h, al         ; Send control word to PIT
+    mov al, 34h         
+    out 43h, al         
 
-    mov ax, [prescaler] ; Load prescaler value
-    out 40h, al         ; Send low byte of prescaler to PIT
-    mov al, ah          ; Send high byte of prescaler to PIT
-    out 40h, al         ; 
+    mov ax, [prescaler] 
+    out 40h, al         
+    mov al, ah          
+    out 40h, al         
 
     pop bx
     pop ax
     ret
-init_pit endp
+finit_pscl endp
 
-delay proc
+fdelay proc
   push ax
   push bx
   push dx
@@ -87,7 +88,7 @@ delay_loop:
   pop ax
 
   ret
-delay endp
+fdelay endp
 
 ftransfer proc
 	push ax
@@ -251,7 +252,7 @@ chart_loop1:
   cmp cx, f1_end
   je finish_chart_loop1
 
-  call delay
+  call fdelay
 	inc cx
   jmp chart_loop1 ;уменьшаем сx
 
@@ -296,7 +297,7 @@ chart_loop2:
   cmp cx, f2_end
   je finish_chart_loop2
 
-  call delay
+  call fdelay
 	inc cx
   jmp chart_loop2 ;уменьшаем сx
 
@@ -362,7 +363,7 @@ chart_loop3:
   cmp cx, f3_end
   je finish_chart_loop3
 
-  call delay
+  call fdelay
 	inc cx
   jmp chart_loop3 ;уменьшаем сx
 
@@ -388,7 +389,7 @@ start:
 
     call fdraw_horizontal_line
 
-    call init_pit
+    call finit_pscl
 
 		call fdraw_chart1
 		call fdraw_chart2
