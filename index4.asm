@@ -2,6 +2,11 @@
 model use16 small
 .stack 100h
 .data
+		b dw 175
+
+		k2 dw 100
+		k1 dw 1 
+
     x dw ?
     y dw ?
     axis dw ? ;задаѐм ось
@@ -20,6 +25,35 @@ model use16 small
 
     temp dw ?
 .code
+
+ftransfer proc
+	push ax
+	push bx
+	push cx
+	push dx
+
+  fldpi 
+  fmul 
+  fild pi 
+  fdiv 
+  fild k1 
+  fdiv
+  fimul k2 
+  fchs 
+  fiadd b 
+  frndint
+  fistp y 
+ 	 mov ah, 0Ch 
+ 	 mov bh, 0h 
+ 	 mov cx,si
+ 	 mov dx, y
+ 	 int 10h
+
+ 	 pop dx
+ 	 pop cx
+ 	 pop bx
+ 	 pop ax
+ftransfer endp
 
 fprint_dot proc
 	push ax
@@ -119,20 +153,32 @@ fdraw_chart1 proc
 	push cx
 	push dx
 
-  mov cx, -100 ;начинаем рассчитывать функцию
+  mov cx, -300 ;начинаем рассчитывать функцию
 chart_loop1: 
   mov x, cx 
 
+
+	fild x
+	fldpi
+	fmul
+	fild pi
+	fdiv
+	fild kx
+	fdiv
+
 	fild v_5
 	fild x
+	fchs
 	fmul
 	fild v_1
 	fadd
 
 	fild v_3
 	fild x
+	fchs
 	fmul st(0), st(0)
 	fdiv
+
 	fimul ky
 	fchs
 	frndint
@@ -216,7 +262,7 @@ finish_chart_loop2:
   ret
 fdraw_chart2 endp
 
-Start:
+start:
     mov ax, @data
     mov ds, ax
     xor ax, ax

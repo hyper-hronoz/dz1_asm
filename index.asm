@@ -2,11 +2,16 @@
 model use16 small
 .stack 100h
 .data
+		b dw 175
+
+		k2 dw 150
+		k1 dw 1 
+
     x dw ?
     y dw ?
     axis dw ? ;задаѐм ось
 
-    ky dw 10
+    ky dw 70
     kx dw 1 
 
     v_1 dw 1
@@ -20,6 +25,25 @@ model use16 small
 
     temp dw ?
 .code
+
+ftransfer proc
+	push ax
+	push bx
+	push cx
+	push dx
+
+	fldpi
+	fmul
+	fild pi
+	fdiv
+	fild k1
+	fdiv
+
+ 	pop dx
+ 	pop cx
+ 	pop bx
+ 	pop ax
+ftransfer endp
 
 fprint_dot proc
 	push ax
@@ -119,20 +143,25 @@ fdraw_chart1 proc
 	push cx
 	push dx
 
-  mov cx, -100 ;начинаем рассчитывать функцию
+  mov cx, -300 ;начинаем рассчитывать функцию
 chart_loop1: 
   mov x, cx 
 
-	fild v_5
 	fild x
+	call ftransfer
+
+	fild v_5
 	fmul
 
 	fild v_1
 	fadd
 
-	fild v_3
 	fild x
+	call ftransfer
+
 	fmul st(0), st(0)
+	fild v_3
+	fadd 
 	fdiv
 
 	fimul ky
@@ -174,17 +203,13 @@ chart_loop2:
   mov x, cx 
 
 	fild x
-	fldpi
-	fmul
-	fild pi
-	fdiv
-	fild kx
-	fdiv
+	call ftransfer
 	fsin
 	fmul st(0), st(0)
 
 	fild v_5
 	fild x
+	call ftransfer
 	fadd
 	fsqrt
 
@@ -218,7 +243,58 @@ finish_chart_loop2:
   ret
 fdraw_chart2 endp
 
-Start:
+fdraw_chart3 proc
+	push ax
+	push bx
+	push cx
+	push dx
+
+  mov cx, 60 ;начинаем рассчитывать функцию
+chart_loop3: 
+  mov x, cx 
+
+	fild x
+	call ftransfer
+	fsin
+	fmul st(0), st(0)
+
+	fild v_5
+	fild x
+	call ftransfer
+	fadd
+	fsqrt
+
+	fmul
+
+	fimul ky
+	fchs
+	frndint
+	fistp y
+  mov ah, 0Ch ;установка графической точки
+  mov bh, 0h ;ставим в нулевое окно
+  mov dx, y ;ставим в y строку
+  add dx, top_offst
+  mov al, 0 ;цвет черный
+  push cx
+  add cx, left_offst
+  int 10h
+  pop cx
+  
+  cmp cx, 200 
+  je finish_chart_loop3
+
+	inc cx
+  jmp chart_loop3 ;уменьшаем сx
+
+finish_chart_loop3:
+  pop dx
+  pop cx
+  pop bx
+  pop ax
+  ret
+fdraw_chart3 endp
+
+start:
     mov ax, @data
     mov ds, ax
     xor ax, ax
@@ -234,6 +310,7 @@ Start:
 
 		call fdraw_chart1
 		call fdraw_chart2
+		call fdraw_chart3
 
     call fexit
 
